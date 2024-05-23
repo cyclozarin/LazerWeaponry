@@ -52,9 +52,13 @@
     </PropertyGroup>
     <ItemGroup>
       <None Remove="Bundles\sfxbundle" />
+      <None Remove="Embedded plugins\Notest.ConfigSync.dll" />
+      <None Remove="Embedded plugins\rivinwin.MortalEnemies.dll" />
     </ItemGroup>
     <ItemGroup>
       <EmbeddedResource Include="Bundles\sfxbundle" />
+      <EmbeddedResource Include="Embedded plugins\Notest.ConfigSync.dll" />
+      <EmbeddedResource Include="Embedded plugins\rivinwin.MortalEnemies.dll" />
     </ItemGroup>
 
     <!-- Primary Package References -->
@@ -78,7 +82,10 @@
     <ItemGroup>
         <Reference Include="$(MMHOOKManaged)MMHOOK_Assembly-CSharp.dll" />
         <Reference Include="Notest.ConfigSync">
-          <HintPath>C:\Users\zarin\Downloads\Notest.ConfigSync.dll</HintPath>
+          <HintPath>$(ProjectDir)Embedded plugins\Notest.ConfigSync.dll</HintPath>
+        </Reference>
+        <Reference Include="rivinwin.MortalEnemies">
+          <HintPath>$(ProjectDir)Embedded plugins\rivinwin.MortalEnemies.dll</HintPath>
         </Reference>
     </ItemGroup>
 </Project>

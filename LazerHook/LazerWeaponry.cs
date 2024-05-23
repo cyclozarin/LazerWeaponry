@@ -11,7 +11,7 @@ using System.Reflection;
 using UnityEngine;
 using Zorro.Core.CLI;
 using UnityEngine.SceneManagement;
-using Photon.Pun;
+using MortalEnemies;
 
 namespace LazerHook
 {
@@ -37,7 +37,7 @@ namespace LazerHook
             internal static Configuration sync_RecoilForce = new(nameof(LazerWeaponry), "LW_RecoilForce", 25);
             internal static Configuration sync_KillReward = new(nameof(LazerWeaponry), "LW_KillReward", 35);
         }
-
+        
         internal static GameObject Projectile = null!;
 
         internal const uint MYCELIUM_ID = 391309;
@@ -52,7 +52,7 @@ namespace LazerHook
 
         internal static bool IsOnSurface => SceneManager.GetActiveScene().name.Contains("Surface");
 
-        internal static Item _rescueHookItem = ItemDatabase.Instance.Objects.Where(item => item.displayName == "Rescue Hook").FirstOrDefault();
+        private static Item _rescueHookItem = ItemDatabase.Instance.Objects.Where(item => item.displayName == "Rescue Hook").FirstOrDefault();
 
         private void Awake()
         {
@@ -151,7 +151,8 @@ namespace LazerHook
             _spawnedProjectile.hitAction = (Action<RaycastHit>)Delegate.Combine(_spawnedProjectile.hitAction, delegate (RaycastHit hit)
             {
                 var _hitPlayer = hit.collider.GetComponentInParent<Player>();
-                if (_hitPlayer != null)
+                var _hitMortality = hit.collider.GetComponentInParent<Mortality>();
+                if (_hitMortality != null)
                 {
                     bool _hitHead = _hitPlayer.refs.ragdoll.GetBodypartFromCollider(hit.collider).bodypartType == BodypartType.Head;
                     int _headshotDamage = (int)(RescueHookHook.Damage * RescueHookHook.HeadshotDamageMultiplier) - RescueHookHook.Damage;
@@ -161,10 +162,7 @@ namespace LazerHook
                         RescueHookHook.HeadshotCombo++;
                         RescueHookHook.HelmetTextString = $"headshot! (x{RescueHookHook.HeadshotCombo})\n";
                         MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_PlayLocalSound), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, 0, IsOnSurface ? 0.75f : 1f);
-                        if (!_hitPlayer.ai)
-                        {
-                            _hitPlayer.CallTakeDamage(_headshotDamage);
-                        }
+                        _hitMortality.Damage(_headshotDamage);
                     }
                     if (!_hitPlayer.ai && !_hitPlayer.refs.view.IsMine && !_hitPlayer.data.dead && _hitPlayer.data.health <= RescueHookHook.Damage || _hitPlayer.data.health <= (RescueHookHook.Damage + _headshotDamage))
                     {
@@ -176,6 +174,7 @@ namespace LazerHook
                     if (_hitPlayer.ai)
                     {
                         _hitPlayer.CallTakeDamageAndAddForceAndFall(0f, hit.point * RescueHookHook.MonsterHitForceMultiplier, RescueHookHook.MonsterFallTime * (_hitHead ? 2 : 1)); // basically we implement a cheaper shock stick that works only on monsters
+                        _hitMortality.Damage(RescueHookHook.Damage);
                     }
                     MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_SetLocalHelmetText), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID);
                 }

@@ -150,7 +150,6 @@ namespace LazerHook.Hooks
                         _spawnPoint = _diveBellTransform.GetComponentInChildren<SpawnPoint>();
                     }
                     Plugin.Logger.LogDebug("rolling back to our previous random state");
-                    Random.state = _previousState;
                 }
                 return _spawnPoint;
             }
