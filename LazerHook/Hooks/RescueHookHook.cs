@@ -27,39 +27,17 @@ namespace LazerHook.Hooks
         private static Coroutine? _hookRechargeCoroutine = null!;
         #endregion
 
-        #region Settings and internal fields
-        internal static int Damage => (int)Plugin.SyncedSettings.sync_Damage.CurrentValue;
-
-        internal static int MaxAmmo => (int)Plugin.SyncedSettings.sync_MaxAmmo.CurrentValue;
-
-        internal static float DelayAfterFire => (float)Plugin.SyncedSettings.sync_DelayAfterFire.CurrentValue;
-
-        internal static float HeadshotDamageMultiplier => (float)Plugin.SyncedSettings.sync_HeadshotDamageMultiplier.CurrentValue;
-
-        internal static bool PVPMode => (bool)Plugin.SyncedSettings.sync_PVPMode.CurrentValue;
-
-        internal static float MonsterFallTime => (float)Plugin.SyncedSettings.sync_MonsterFallTime.CurrentValue;
-
-        internal static float MonsterHitForceMultiplier => (float)Plugin.SyncedSettings.sync_MonsterHitForceMultiplier.CurrentValue;
-
-        internal static int RecoilForce => (int)Plugin.SyncedSettings.sync_RecoilForce.CurrentValue;
-
-        internal static int KillReward => (int)Plugin.SyncedSettings.sync_KillReward.CurrentValue;
-
+        #region Internal fields
         internal static int HeadshotCombo = 0;
 
         internal static string HelmetTextString = "";
-
-        internal static MeshRenderer ProjectileRenderer = null!;
-
-        internal static ParticleSystemRenderer ProjectileHitRenderer = null!;
         #endregion
 
         #region Methods to use in hooks
         private static IEnumerator StartDelayAfterFire()
         {
             _ableToFire = false;
-            yield return new WaitForSecondsRealtime(DelayAfterFire);
+            yield return new WaitForSecondsRealtime(Plugin.InitialSettings.DelayAfterFire);
             _ableToFire = true;
         }
 
@@ -92,18 +70,20 @@ namespace LazerHook.Hooks
             HeadshotCombo = 0;
         }
 
-        private static void ChangeProjectileColor(Color color)
+        internal static void ChangeProjectileColor(GameObject projectile, Color color)
         {
-            var _projectileMaterial = ProjectileRenderer.material;
-            var _projectileHitMaterial = ProjectileHitRenderer.materials[1]; // we need to get M_BrightRed material and nothing else
+            var _projectileRenderer = projectile.GetComponentInChildren<MeshRenderer>();
+            var _projectileHitRenderer = projectile.GetComponent<Projectile_SpawnObject>().objectToSpawn.GetComponent<ParticleSystemRenderer>(); // i am doin' that curse shit to change color of an INSTANCE of a bullet, not of its ORIGINAL
+            var _projectileMaterial = _projectileRenderer.material;
+            var _projectileHitMaterial = _projectileHitRenderer.materials[1]; // projectile hit have 2 materials but color changing works only on second material
             _projectileMaterial.color = color;
             _projectileMaterial.SetColor("_BaseMap", color);
-            _projectileMaterial.SetColor("_EmissionColor", color * 30);
+            _projectileMaterial.SetColor("_Emission", color * 30);
             _projectileHitMaterial.color = color;
             _projectileHitMaterial.SetColor("_BaseMap", color);
-            _projectileHitMaterial.SetColor("_EmissionColor", color * 30);
-            ProjectileRenderer.sharedMaterial = _projectileMaterial;
-            ProjectileHitRenderer.sharedMaterial = _projectileHitMaterial;
+            _projectileHitMaterial.SetColor("_Emission", color * 30);
+            _projectileRenderer.material = _projectileMaterial;
+            _projectileHitRenderer.material = _projectileHitMaterial;
         }
 
         private static void ChangeRescueHookBeamColor(RescueHook hook)
@@ -121,7 +101,6 @@ namespace LazerHook.Hooks
         #region MonoMod hooks
         internal static void Init()
         {
-            On.PlayerVisor.Update += MMHook_Prefix_RecolorDogProjectileAndToggleChargeSource; // idrk why its working only when i hook update and not applyvisorcolor...
             On.RescueHook.Start += MMHook_Postfix_SetRescueHookDataOnStart;
             On.RescueHook.Update += MMHook_Postfix_ToggleRescueHookModeAndCheckForIt;
             On.RescueHook.Fire += MMHook_Prefix_LazersInRescueHook;
@@ -162,23 +141,12 @@ namespace LazerHook.Hooks
             }
         }
 
-        private static void MMHook_Prefix_RecolorDogProjectileAndToggleChargeSource(On.PlayerVisor.orig_Update orig, PlayerVisor self)
-        {
-            try
-            {
-                _chargeSource.enabled = !_firedWhileAgo;
-                if (!self.hue.IsNone && self.m_player.refs.view.IsMine)
-                    ChangeProjectileColor(self.visorColor.value);
-            }
-            catch { } // dont yell at me when i drop rescue hook, bastard!
-            orig(self);
-        }
-
         private static void MMHook_Postfix_ToggleRescueHookModeAndCheckForIt(On.RescueHook.orig_Update orig, RescueHook self)
         {
             orig(self);
             try
             {
+                _chargeSource.enabled = !_firedWhileAgo;
                 if (_lazerMode) self.isPulling = false;
                 if (self.isHeldByMe && self.playerHoldingItem.input.toggleCameraFlipWasPressed && !self.playerHoldingItem.HasLockedInput() && GlobalInputHandler.CanTakeInput())
                 {
@@ -191,7 +159,7 @@ namespace LazerHook.Hooks
 
         private static void MMHook_Prefix_LazersInRescueHook(On.RescueHook.orig_Fire orig, RescueHook self)
         {
-            if (PVPMode)
+            if (Plugin.InitialSettings.PVPMode)
             {
                 _firedWhileAgo = true;
                 if (_hookRechargeCoroutine != null)
@@ -203,9 +171,9 @@ namespace LazerHook.Hooks
             if (_lazerMode)
             {
                 if (!_ableToFire) return;
-                self.m_batteryEntry.AddCharge(-self.m_batteryEntry.m_maxCharge / MaxAmmo);
+                self.m_batteryEntry.AddCharge(-self.m_batteryEntry.m_maxCharge / Plugin.InitialSettings.MaxAmmo);
                 MyceliumNetwork.RPC(Plugin.MYCELIUM_ID, nameof(Plugin.RPC_SpawnBullet), ReliableType.Reliable, self.dragPoint.position + (self.dragPoint.forward * 1.5f) + (Vector3.down * 0.15f) + (Vector3.left * 0.05f), Quaternion.LookRotation(self.dragPoint.forward));
-                self.playerHoldingItem.CallAddForceToBodyParts([self.playerHoldingItem.refs.ragdoll.GetBodyPartID(BodypartType.Hand_R)], [-self.dragPoint.forward * RecoilForce]);
+                self.playerHoldingItem.CallAddForceToBodyParts([self.playerHoldingItem.refs.ragdoll.GetBodyPartID(BodypartType.Hand_R)], [-self.dragPoint.forward * Plugin.InitialSettings.RecoilForce]);
                 self.StartCoroutine(StartDelayAfterFire());
                 return;
             }

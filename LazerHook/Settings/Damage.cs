@@ -1,9 +1,7 @@
-﻿using ContentSettings.API.Attributes;
-using ContentSettings.API.Settings;
+﻿using ContentSettings.API.Settings;
 
 namespace LazerHook.Settings
 {
-    [SettingRegister("CYCLOZARIN MODS", "LazerHook settings")]
     internal class Damage : IntSetting, ICustomSetting
     {
 

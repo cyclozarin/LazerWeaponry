@@ -54,6 +54,7 @@
       <None Remove="Bundles\sfxbundle" />
       <None Remove="Embedded plugins\Notest.ConfigSync.dll" />
       <None Remove="Embedded plugins\rivinwin.MortalEnemies.dll" />
+      <None Remove="Settings\KillReward.cs~RF10b6668.TMP" />
     </ItemGroup>
     <ItemGroup>
       <EmbeddedResource Include="Bundles\sfxbundle" />

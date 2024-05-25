@@ -1,9 +1,7 @@
-﻿using ContentSettings.API.Attributes;
-using ContentSettings.API.Settings;
+﻿using ContentSettings.API.Settings;
 
 namespace LazerHook.Settings
 {
-    [SettingRegister("CYCLOZARIN MODS", "LazerHook settings")]
     internal class KillReward : IntSetting, ICustomSetting
     {
         public override void ApplyValue() => Plugin.SyncedSettings.sync_KillReward.SetValue(Value);
