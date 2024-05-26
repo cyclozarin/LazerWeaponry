@@ -40,6 +40,9 @@ namespace LazerHook
             internal static int RecoilForce => (int)SyncedSettings.sync_RecoilForce.CurrentValue;
             internal static int KillReward => (int)SyncedSettings.sync_KillReward.CurrentValue;
             internal static bool VulnerableEnemies => (bool)SyncedSettings.sync_VulnerableEnemies.CurrentValue;
+            internal static float HeadshotFallTime => (float)SyncedSettings.sync_HeadshotFallTime.CurrentValue;
+            internal static float HeadshotSoundVolume = .75f;
+            internal static float KillSoundVolume = 1f;
         }
 
         internal static class SyncedSettings 
@@ -53,6 +56,7 @@ namespace LazerHook
             internal static Configuration sync_MonsterHitForceMultiplier = new(nameof(LazerWeaponry), "LW_MonsterHitForceMultiplier", .25f);
             internal static Configuration sync_RecoilForce = new(nameof(LazerWeaponry), "LW_RecoilForce", 25);
             internal static Configuration sync_KillReward = new(nameof(LazerWeaponry), "LW_KillReward", 35);
+            internal static Configuration sync_HeadshotFallTime = new(nameof(LazerWeaponry), "LW_HeadshotFallTime", 1.5f);
             internal static Configuration sync_VulnerableEnemies = new(nameof(LazerWeaponry), "LW_VulnerableEnemies", false);
         }
         
@@ -112,7 +116,11 @@ namespace LazerHook
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new RecoilForce());
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new DelayAfterFire());
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new HeadshotDamageMultiplier());
+            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new HeadshotFallTime());
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new KillReward());
+
+            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Sound settings", new HeadshotSoundVolume());
+            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Sound settings", new KillSoundVolume());
 
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Monster behaviour on hit", new MonsterFallTime());
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Monster behaviour on hit", new MonsterHitForceMultiplier());
@@ -133,6 +141,7 @@ namespace LazerHook
             SyncedSettings.sync_RecoilForce.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed recoil force to {SyncedSettings.sync_RecoilForce.CurrentValue}!"); };
             SyncedSettings.sync_KillReward.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed kill reward to {SyncedSettings.sync_KillReward.CurrentValue}!"); };
             SyncedSettings.sync_VulnerableEnemies.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed vulnerable enemies to {SyncedSettings.sync_VulnerableEnemies.CurrentValue}!"); };
+            SyncedSettings.sync_HeadshotFallTime.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed headshot fall time to {SyncedSettings.sync_HeadshotFallTime.CurrentValue}!"); };
         }
 
         private CSteamID GetSteamIdFromString(string rawSteamId)
@@ -196,6 +205,7 @@ namespace LazerHook
         internal void RPC_PlayLocalSound(int soundNumber, float volume)
         {
             SoundType _soundType = (SoundType)soundNumber;
+            Logger.LogDebug($"sound number: {soundNumber} volume: {volume}");
             switch (_soundType)
             {
                 case SoundType.Headshot:
@@ -246,15 +256,18 @@ namespace LazerHook
                     {
                         Logger.LogDebug($"hit head: {_hitHead} collider name: {hit.collider.name} headshot dmg: {_headshotDamage}");
                         MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_SetLocalHelmetText), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, $"headshot! (x<insertCombo>)\n", false, true);
-                        MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_PlayLocalSound), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, 0, IsOnSurface ? 0.75f : 1f);
+                        MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_PlayLocalSound), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, (int)SoundType.Headshot, InitialSettings.HeadshotSoundVolume);
+                        if (!_hitPlayer.ai)
+                            _hitPlayer.CallTakeDamageAndTase(0f, InitialSettings.HeadshotFallTime); // we dont deal any damage here because we deal it later on
                         _hitMortality!.Damage(_headshotDamage);
                     }
-                    if (!_hitPlayer.ai && !_hitPlayer.refs.view.IsMine && _hitPlayer.data.sinceDied <= 0.5f && _hitPlayer.data.health <= InitialSettings.Damage || (_hitPlayer.data.health <= (InitialSettings.Damage + _headshotDamage) && _hitHead))
+                    if (!_hitPlayer.ai && !_hitPlayer.refs.view.IsMine && _hitPlayer.data.sinceDied <= 0.5f && (_hitPlayer.data.health <= InitialSettings.Damage || _hitPlayer.data.health <= (InitialSettings.Damage + _headshotDamage)) && _hitHead)
                     {
+                        Logger.LogDebug(_hitPlayer.ai ? "why the fuck are you calling???" : "ok sanity check completed");
                         string _hitPlayerNickname = _hitPlayer.refs.view.Owner.NickName;
                         string _hitPlayerHexColor = ColorUtility.ToHtmlStringRGB(_hitPlayer.refs.visor.visorColor.value);
                         MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_SetLocalHelmetText), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, $"<color=red>killed</color> <color=#{_hitPlayerHexColor}>{_hitPlayerNickname}!</color>", true, false);
-                        MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_PlayLocalSound), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, 1, 1f);
+                        MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_PlayLocalSound), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, (int)SoundType.Kill, InitialSettings.KillSoundVolume);
                         MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_SetLocalKillReward), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, _hitPlayerNickname);
                     }
                     if (_hitPlayer.ai)
