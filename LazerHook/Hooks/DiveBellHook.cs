@@ -132,22 +132,25 @@ namespace LazerWeaponry.Hooks
         private static void MMHook_Postfix_GenerateDiveBellIndexes(On.DivingBell.orig_TransitionGameFeel orig, DivingBell self)
         {
             orig(self);
-            var _previousState = Random.state;
-            int _randomDiveBellSeed = Guid.NewGuid().GetHashCode();
-            Random.InitState(_randomDiveBellSeed);
-            LazerWeaponryPlugin.Logger.LogDebug($"generated seed {_randomDiveBellSeed} for generating dive bell spawn locations");
-            byte[] _diveBellIndexes = new byte[MyceliumNetwork.PlayerCount];
-            string _currentLevel = new List<string> { "FactoryScene", "MinesScene", "HarbourScene" }[SurfaceNetworkHandler.RoomStats.LevelToPlay];
-            LazerWeaponryPlugin.Logger.LogDebug($"generating dive bell locations for {_currentLevel} on day {SurfaceNetworkHandler.RoomStats.CurrentDay}");
-            for (int i = 0; i < MyceliumNetwork.PlayerCount; i++)
+            if (MyceliumNetwork.IsHost)
             {
-                int _randomDiveBellIndex = Random.Range(0, Plugin.MapNameToDiveBellCount[_currentLevel] - 1);
-                _diveBellIndexes[i] = (byte)_randomDiveBellIndex;
-                LazerWeaponryPlugin.Logger.LogDebug($"will spawn {SteamFriends.GetFriendPersonaName(MyceliumNetwork.Players[i])} at bell #{_randomDiveBellIndex}");
+                var _previousState = Random.state;
+                int _randomDiveBellSeed = Guid.NewGuid().GetHashCode();
+                Random.InitState(_randomDiveBellSeed);
+                LazerWeaponryPlugin.Logger.LogDebug($"generated seed {_randomDiveBellSeed} for generating dive bell spawn locations");
+                byte[] _diveBellIndexes = new byte[MyceliumNetwork.PlayerCount];
+                string _currentLevel = new List<string> { "FactoryScene", "MinesScene", "HarbourScene" }[SurfaceNetworkHandler.RoomStats.LevelToPlay];
+                LazerWeaponryPlugin.Logger.LogDebug($"generating dive bell locations for {_currentLevel} on day {SurfaceNetworkHandler.RoomStats.CurrentDay}");
+                for (int i = 0; i < MyceliumNetwork.PlayerCount; i++)
+                {
+                    int _randomDiveBellIndex = Random.Range(0, Plugin.MapNameToDiveBellCount[_currentLevel] - 1);
+                    _diveBellIndexes[i] = (byte)_randomDiveBellIndex;
+                    LazerWeaponryPlugin.Logger.LogDebug($"will spawn {SteamFriends.GetFriendPersonaName(MyceliumNetwork.Players[i])} at bell #{_randomDiveBellIndex}");
+                }
+                MyceliumNetwork.SetLobbyData("diveBellIndexes", Convert.ToBase64String(_diveBellIndexes)); // we serialize that via base64 because otherwise we will encounter InvalidCastException inside mycelium
+                LazerWeaponryPlugin.Logger.LogDebug("done generating dive bell spawn locations, rolling back to previous random state");
+                Random.state = _previousState;
             }
-            MyceliumNetwork.SetLobbyData("diveBellIndexes", Convert.ToBase64String(_diveBellIndexes)); // we serialize that via base64 because otherwise we will encounter InvalidCastException inside mycelium
-            LazerWeaponryPlugin.Logger.LogDebug("done generating dive bell spawn locations, rolling back to previous random state");
-            Random.state = _previousState;
         }
 
         private static SpawnPoint MMHook_Prefix_IndividualRandomDiveBell(On.DiveBellParent.orig_GetSpawn orig, DiveBellParent self)
