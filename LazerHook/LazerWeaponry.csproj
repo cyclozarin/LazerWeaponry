@@ -16,7 +16,7 @@
     <!-- Project Properties -->
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
-        <RootNamespace>LazerHook</RootNamespace>
+        <RootNamespace>LazerWeaponry</RootNamespace>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>latest</LangVersion>
     </PropertyGroup>
@@ -53,13 +53,11 @@
     <ItemGroup>
       <None Remove="Bundles\sfxbundle" />
       <None Remove="Embedded plugins\Notest.ConfigSync.dll" />
-      <None Remove="Embedded plugins\rivinwin.MortalEnemies.dll" />
       <None Remove="Settings\KillReward.cs~RF10b6668.TMP" />
     </ItemGroup>
     <ItemGroup>
       <EmbeddedResource Include="Bundles\sfxbundle" />
       <EmbeddedResource Include="Embedded plugins\Notest.ConfigSync.dll" />
-      <EmbeddedResource Include="Embedded plugins\rivinwin.MortalEnemies.dll" />
     </ItemGroup>
 
     <!-- Primary Package References -->
@@ -89,4 +87,6 @@
           <HintPath>$(ProjectDir)Embedded plugins\rivinwin.MortalEnemies.dll</HintPath>
         </Reference>
     </ItemGroup>
+
+    <Import Project="./LazerWeaponry.Packaging.targets" />
 </Project>

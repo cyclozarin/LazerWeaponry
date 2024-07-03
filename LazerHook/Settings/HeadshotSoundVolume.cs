@@ -1,11 +1,11 @@
 ﻿using BepInEx.Logging;
 using ContentSettings.API.Settings;
 
-namespace LazerHook.Settings
+namespace LazerWeaponry.Settings
 {
     internal class HeadshotSoundVolume : IntSetting, ICustomSetting
     {
-        public override void ApplyValue() => Plugin.InitialSettings.HeadshotSoundVolume = Value / 100f; 
+        public override void ApplyValue() => LazerWeaponryPlugin.InitialSettings.HeadshotSoundVolume = Value / 100f; 
 
         public string GetDisplayName() => "Headshot sound volume";
 

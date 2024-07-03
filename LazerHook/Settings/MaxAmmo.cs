@@ -1,12 +1,12 @@
 ﻿using ContentSettings.API.Settings;
 
-namespace LazerHook.Settings
+namespace LazerWeaponry.Settings
 {
     internal class MaxAmmo : IntSetting, ICustomSetting
     {
-        public override void ApplyValue() => Plugin.SyncedSettings.sync_MaxAmmo.SetValue(Value);
+        public override void ApplyValue() => LazerWeaponryPlugin.SyncedSettings.sync_MaxAmmo.SetValue(Value);
 
-        public string GetDisplayName() => "Maximum ammo";
+        public string GetDisplayName() => "Ammo";
 
         protected override int GetDefaultValue() => 10;
 

@@ -3,11 +3,11 @@ using System;
 using Unity.Mathematics;
 using Zorro.Settings;
 
-namespace LazerHook.Settings
+namespace LazerWeaponry.Settings
 {
     internal class MonsterFallTime : FloatSetting, ICustomSetting
     {
-        public override void ApplyValue() => Plugin.SyncedSettings.sync_MonsterFallTime.SetValue((float)Math.Round(Value, 2));
+        public override void ApplyValue() => LazerWeaponryPlugin.SyncedSettings.sync_MonsterFallTime.SetValue((float)Math.Round(Value, 2));
 
         public string GetDisplayName() => "Monster fall time on hit";
 

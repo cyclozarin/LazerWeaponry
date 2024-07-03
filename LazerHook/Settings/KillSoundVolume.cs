@@ -1,10 +1,10 @@
 ﻿using ContentSettings.API.Settings;
 
-namespace LazerHook.Settings
+namespace LazerWeaponry.Settings
 {
     internal class KillSoundVolume : IntSetting, ICustomSetting
     {
-        public override void ApplyValue() => Plugin.InitialSettings.KillSoundVolume = Value / 100;
+        public override void ApplyValue() => LazerWeaponryPlugin.InitialSettings.KillSoundVolume = Value / 100f;
 
         public string GetDisplayName() => "Kill sound volume";
 

@@ -1,10 +1,10 @@
 ﻿using ContentSettings.API.Settings;
 
-namespace LazerHook.Settings
+namespace LazerWeaponry.Settings
 {
     internal class PVPMode : BoolSetting, ICustomSetting
     {
-        public override void ApplyValue() => Plugin.SyncedSettings.sync_PVPMode.SetValue(Value);
+        public override void ApplyValue() => LazerWeaponryPlugin.SyncedSettings.sync_PVPMode.SetValue(Value);
 
         public string GetDisplayName() => "PvP mode";
 

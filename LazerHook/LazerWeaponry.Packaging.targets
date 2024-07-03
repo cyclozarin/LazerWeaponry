@@ -1,0 +1,24 @@
+<Project>
+    <!-- Change MMHOOK Reference Location -->
+    <PropertyGroup Condition="$(CI) == 'true'">
+        <MMHOOK>$(ProjectDir)MMHOOK/</MMHOOK>
+        <MMHOOKManaged>$(MMHOOK)Managed/</MMHOOKManaged>
+        <MMHOOKplugins>$(MMHOOK)plugins/</MMHOOKplugins>
+        <MMHOOKpatchers>$(MMHOOK)patchers/</MMHOOKpatchers>
+        <MMHOOKcore>$(MMHOOK)core/</MMHOOKcore>
+    </PropertyGroup>
+
+    <!-- Pack for Thunderstore -->
+    <Target
+        Name="ThunderstorePack"
+        AfterTargets="PostBuildEvent"
+        Condition="$(Configuration) == 'Release' and $(CI) == 'true'"
+        DependsOnTargets="SetModVersion"
+    >
+        <Exec Command="dotnet tcli build --config-path $(ProjectDir)ts-assets/thunderstore.toml --package-version $(PlainVersion)" />
+        <ItemGroup>
+            <FilesToRename Include="$(ProjectDir)dist/*-$(PlainVersion).zip" />
+        </ItemGroup>
+        <Move SourceFiles="@(FilesToRename)" DestinationFiles="@(FilesToRename -&gt; Replace($(PlainVersion), $(MinVerVersion)))" />
+    </Target>
+</Project>

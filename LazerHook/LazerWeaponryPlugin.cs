@@ -1,7 +1,7 @@
-global using Plugin = LazerHook.LazerWeaponry;
+global using Plugin = LazerWeaponry.LazerWeaponryPlugin;
 using BepInEx;
 using BepInEx.Logging;
-using LazerHook.Hooks;
+using LazerWeaponry.Hooks;
 using MyceliumNetworking;
 using ConfigSync;
 using System;
@@ -14,15 +14,19 @@ using MortalEnemies;
 using TMPro;
 using Steamworks;
 using ContentSettings.API;
-using LazerHook.Settings;
+using LazerWeaponry.Settings;
+using System.Runtime.CompilerServices;
+using System.Collections;
+using System.Collections.Generic;
 
-namespace LazerHook
+namespace LazerWeaponry
 {
     [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION), ContentWarningPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_VERSION, false)]
     [BepInDependency(MyceliumNetworking.MyPluginInfo.PLUGIN_GUID)]
     [BepInDependency(ContentSettings.MyPluginInfo.PLUGIN_GUID)]
     [BepInDependency(ConfigSync.MyPluginInfo.PLUGIN_GUID)]
-    public class LazerWeaponry : BaseUnityPlugin
+    [BepInDependency(MortalEnemies.MyPluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    public class LazerWeaponryPlugin : BaseUnityPlugin
     {
         public static Plugin Instance { get; private set; } = null!;
 
@@ -38,55 +42,68 @@ namespace LazerHook
             internal static float MonsterFallTime => (float)SyncedSettings.sync_MonsterFallTime.CurrentValue;
             internal static float MonsterHitForceMultiplier => (float)SyncedSettings.sync_MonsterHitForceMultiplier.CurrentValue;
             internal static int RecoilForce => (int)SyncedSettings.sync_RecoilForce.CurrentValue;
-            internal static int KillReward => (int)SyncedSettings.sync_KillReward.CurrentValue;
+            internal static int PlayerKillReward => (int)SyncedSettings.sync_PlayerKillReward.CurrentValue;
+            internal static int MonsterKillReward => (int)SyncedSettings.sync_MonsterKillReward.CurrentValue;
             internal static bool VulnerableEnemies => (bool)SyncedSettings.sync_VulnerableEnemies.CurrentValue;
             internal static float HeadshotFallTime => (float)SyncedSettings.sync_HeadshotFallTime.CurrentValue;
+
             internal static float HeadshotSoundVolume = .75f;
+
             internal static float KillSoundVolume = 1f;
         }
 
         internal static class SyncedSettings 
         {
-            internal static Configuration sync_PVPMode = new(nameof(LazerWeaponry), "LW_PvPMode", false);
-            internal static Configuration sync_Damage = new(nameof(LazerWeaponry), "LW_Damage", 10);
-            internal static Configuration sync_MaxAmmo = new(nameof(LazerWeaponry), "LW_MaxAmmo", 10);
-            internal static Configuration sync_DelayAfterFire = new(nameof(LazerWeaponry), "LW_DelayAfterFire", .1f);
-            internal static Configuration sync_HeadshotDamageMultiplier = new(nameof(LazerWeaponry), "LW_HeadshotDamageMultiplier", 2f);
-            internal static Configuration sync_MonsterFallTime = new(nameof(LazerWeaponry), "LW_MonsterFallTime", 2f);
-            internal static Configuration sync_MonsterHitForceMultiplier = new(nameof(LazerWeaponry), "LW_MonsterHitForceMultiplier", .25f);
-            internal static Configuration sync_RecoilForce = new(nameof(LazerWeaponry), "LW_RecoilForce", 25);
-            internal static Configuration sync_KillReward = new(nameof(LazerWeaponry), "LW_KillReward", 35);
-            internal static Configuration sync_HeadshotFallTime = new(nameof(LazerWeaponry), "LW_HeadshotFallTime", 1.5f);
-            internal static Configuration sync_VulnerableEnemies = new(nameof(LazerWeaponry), "LW_VulnerableEnemies", false);
+            internal static Configuration sync_PVPMode = new(nameof(LazerWeaponryPlugin), "LW_PvPMode", false);
+            internal static Configuration sync_Damage = new(nameof(LazerWeaponryPlugin), "LW_Damage", 10);
+            internal static Configuration sync_MaxAmmo = new(nameof(LazerWeaponryPlugin), "LW_MaxAmmo", 10);
+            internal static Configuration sync_DelayAfterFire = new(nameof(LazerWeaponryPlugin), "LW_DelayAfterFire", .1f);
+            internal static Configuration sync_HeadshotDamageMultiplier = new(nameof(LazerWeaponryPlugin), "LW_HeadshotDamageMultiplier", 2f);
+            internal static Configuration sync_MonsterFallTime = new(nameof(LazerWeaponryPlugin), "LW_MonsterFallTime", 2f);
+            internal static Configuration sync_MonsterHitForceMultiplier = new(nameof(LazerWeaponryPlugin), "LW_MonsterHitForceMultiplier", .25f);
+            internal static Configuration sync_RecoilForce = new(nameof(LazerWeaponryPlugin), "LW_RecoilForce", 25);
+            internal static Configuration sync_PlayerKillReward = new(nameof(LazerWeaponryPlugin), "LW_PlayerKillReward", 35);
+            internal static Configuration sync_MonsterKillReward = new(nameof(LazerWeaponryPlugin), "LW_MonsterKillReward", 15);
+            internal static Configuration sync_HeadshotFallTime = new(nameof(LazerWeaponryPlugin), "LW_HeadshotFallTime", 1.5f);
+            internal static Configuration sync_VulnerableEnemies = new(nameof(LazerWeaponryPlugin), "LW_VulnerableEnemies", false);
         }
         
         internal static GameObject Projectile = null!;
 
         internal const uint MYCELIUM_ID = 391309;
 
-        internal AssetBundle Bundle = AssetBundle.LoadFromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream("LazerHook.Bundles.sfxbundle"));
+        internal AssetBundle Bundle = null!;
 
-        internal static AudioClip HeadshotSound = null!;
+        internal AudioClip HeadshotSound = null!;
 
-        internal static AudioClip KillSound = null!;
+        internal AudioClip KillSound = null!;
 
         internal static int LocalPhotonViewID => Player.localPlayer.refs.view.ViewID;
 
         internal static bool IsOnSurface => SceneManager.GetActiveScene().name.Contains("Surface");
 
+        internal static Dictionary<string, int> MapNameToDiveBellCount = new()
+        {
+            { "FactoryScene", 20 },
+            { "HarbourScene", 8 },
+            { "MinesScene", 7 }
+        };
+
+        internal static bool MortalityLoaded => BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(MortalEnemies.MyPluginInfo.PLUGIN_GUID);
+
         private enum SoundType { Headshot, Kill };
 
-        private static readonly Item _rescueHookItem = ItemDatabase.Instance.Objects.Where(item => item.displayName == "Rescue Hook").FirstOrDefault();
+        private static Item _rescueHookItem = null!;
+
+        private int _totalRewardForAllKills;
 
         private void Awake()
         {
             Logger = base.Logger;
             Instance = this;
 
-            Projectile = Resources.Load<GameObject>("Dog").GetComponentInChildren<Attack_Dog>().projectile;
-
-            HeadshotSound = Bundle.LoadAsset<AudioClip>("headshot");
-            KillSound = Bundle.LoadAsset<AudioClip>("killsound");
+            if (!MortalityLoaded)
+                Logger.LogWarning("MortalEnemies is not loaded. Vulnerable enemies setting won't work.");
 
             HookAll();
 
@@ -95,8 +112,23 @@ namespace LazerHook
            
             MyceliumNetwork.RegisterNetworkObject(this, MYCELIUM_ID);
             MyceliumNetwork.RegisterLobbyDataKey("diveBellArrivingMessage");
+            MyceliumNetwork.RegisterLobbyDataKey("diveBellIndexes");
 
             Logger.LogInfo($"{MyPluginInfo.PLUGIN_NAME} by {MyPluginInfo.PLUGIN_GUID.Split(".")[0]} has loaded!");
+        }
+
+        private void Start()
+        {
+            Logger.LogInfo("Assigning all important stuff...");
+
+            Projectile = Resources.Load<GameObject>("Dog").GetComponentInChildren<Attack_Dog>().projectile;
+            Bundle = AssetBundle.LoadFromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream("LazerWeaponry.Bundles.sfxbundle"));
+            HeadshotSound = Bundle.LoadAsset<AudioClip>("headshot");
+            KillSound = Bundle.LoadAsset<AudioClip>("killsound");
+            _rescueHookItem = ItemDatabase.Instance.Objects.Where(item => item.displayName == "Rescue Hook").FirstOrDefault();
+            On.Player.Start += MMHook_Postfix_AddKillingRevenue;
+
+            Logger.LogInfo("Done!");
         }
 
         private static void HookAll()
@@ -106,10 +138,23 @@ namespace LazerHook
             RescueHookHook.Init();
             DiveBellHook.Init();
 
-            Logger.LogInfo("Finished hooking!");
+            Logger.LogInfo("Done!");
         }
 
-        private static void RegisterSettings()
+        private IEnumerator MMHook_Postfix_AddKillingRevenue(On.Player.orig_Start orig, Player self)
+        {
+            var _orig = orig(self);
+            while (_orig.MoveNext()) { yield return _orig.Current; }
+
+            if (IsOnSurface && _totalRewardForAllKills > 0)
+            {
+                UserInterface.ShowMoneyNotification($"Killing revenue", $"${_totalRewardForAllKills}", MoneyCellUI.MoneyCellType.Revenue);
+                SurfaceNetworkHandler.RoomStats.AddMoney(_totalRewardForAllKills);
+                _totalRewardForAllKills = 0;
+            }
+        }
+
+        private void RegisterSettings()
         {
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new Damage());
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new MaxAmmo());
@@ -117,7 +162,8 @@ namespace LazerHook
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new DelayAfterFire());
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new HeadshotDamageMultiplier());
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new HeadshotFallTime());
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new KillReward());
+            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new PlayerKillReward());
+            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new MonsterKillReward());
 
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Sound settings", new HeadshotSoundVolume());
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Sound settings", new KillSoundVolume());
@@ -129,7 +175,7 @@ namespace LazerHook
             SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "PvP settings", new VulnerableEnemies());
         }
 
-        private static void RegisterSyncedSettings()
+        private void RegisterSyncedSettings()
         {
             SyncedSettings.sync_PVPMode.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed PvP mode to {SyncedSettings.sync_PVPMode.CurrentValue}!"); };
             SyncedSettings.sync_Damage.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed damage to {SyncedSettings.sync_Damage.CurrentValue}!"); };
@@ -139,10 +185,13 @@ namespace LazerHook
             SyncedSettings.sync_MonsterFallTime.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed monster fall time to {SyncedSettings.sync_MonsterFallTime.CurrentValue}!"); };
             SyncedSettings.sync_MonsterHitForceMultiplier.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed monster force multiplier on hit to {SyncedSettings.sync_MonsterHitForceMultiplier.CurrentValue}!"); };
             SyncedSettings.sync_RecoilForce.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed recoil force to {SyncedSettings.sync_RecoilForce.CurrentValue}!"); };
-            SyncedSettings.sync_KillReward.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed kill reward to {SyncedSettings.sync_KillReward.CurrentValue}!"); };
+            SyncedSettings.sync_PlayerKillReward.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed player kill reward to {SyncedSettings.sync_PlayerKillReward.CurrentValue}!"); };
+            SyncedSettings.sync_MonsterKillReward.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed monster kill reward to {SyncedSettings.sync_MonsterKillReward.CurrentValue}!"); };
             SyncedSettings.sync_VulnerableEnemies.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed vulnerable enemies to {SyncedSettings.sync_VulnerableEnemies.CurrentValue}!"); };
             SyncedSettings.sync_HeadshotFallTime.ConfigChanged += delegate { Logger.LogWarning($"Host dude changed headshot fall time to {SyncedSettings.sync_HeadshotFallTime.CurrentValue}!"); };
         }
+
+
 
         private CSteamID GetSteamIdFromString(string rawSteamId)
         {
@@ -153,12 +202,19 @@ namespace LazerHook
             return default;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        private void HandleDamageToMortality(Collider mortalityCollider, float damage)
+        {
+            var _mortality = mortalityCollider.GetComponentInParent<Mortality>();
+            _mortality.Damage(damage);
+        }
+
         internal static void AddRescueHookToPlayer(Player player)
         {
             if (player.TryGetInventory(out var _inventory) && !_inventory.TryGetSlotWithItem(_rescueHookItem, out _) && _inventory.TryAddItem(new(_rescueHookItem, new(Guid.NewGuid())), out var _slot))
             {
-                Logger.LogInfo($"Added rescue hook to {player.refs.view.Owner.NickName}");
-                player.refs.view.RPC("RPC_SelectSlot", player.refs.view.Owner, _slot.SlotID);
+                Logger.LogInfo($"Added rescue hook to {player.photonView.Owner.NickName}");
+                player.refs.view.RPC("RPC_SelectSlot", player.photonView.Owner, _slot.SlotID);
             }
         }
 
@@ -185,9 +241,8 @@ namespace LazerHook
             _bellOwnerTextObj.transform.localPosition = _bellOwnerTextObj.transform.localPosition with { x = 0 };
             Destroy(_bellOwnerTextObj.GetComponent<UnityEngine.Localization.PropertyVariants.GameObjectLocalizer>()); // gtfo, we dont need localizations
             TextMeshProUGUI _bellOwnerText = _bellOwnerTextObj.GetComponent<TextMeshProUGUI>();
-            Player _playerInBell = _diveBellTransform.Find("Detector").GetComponent<DiveBellPlayerDetector>().CheckForPlayers().First();
-            _bellOwnerText.text = $"{_playerInBell.refs.view.Owner.NickName}'s bell";
-            _bellOwnerText.color = _playerInBell.refs.visor.visorColor.value;
+            _bellOwnerText.text = $"{Player.localPlayer.photonView.Owner.NickName}'s bell";
+            _bellOwnerText.color = Player.localPlayer.refs.visor.visorColor.value;
         }
 
         [CustomRPC]
@@ -204,17 +259,12 @@ namespace LazerHook
         [CustomRPC]
         internal void RPC_PlayLocalSound(int soundNumber, float volume)
         {
-            SoundType _soundType = (SoundType)soundNumber;
-            Logger.LogDebug($"sound number: {soundNumber} volume: {volume}");
-            switch (_soundType)
+            AudioClip _clip = (SoundType)soundNumber switch
             {
-                case SoundType.Headshot:
-                    RescueHookHook.PlaySoundEffect(HeadshotSound, volume);
-                    break;
-                case SoundType.Kill:
-                    RescueHookHook.PlaySoundEffect(KillSound, volume);
-                    break;
-            }
+                SoundType.Headshot => HeadshotSound,
+                SoundType.Kill => KillSound
+            };
+            RescueHookHook.PlaySoundEffect(_clip, volume);
         }
 
         [CustomRPC]
@@ -226,12 +276,12 @@ namespace LazerHook
         }
 
         [CustomRPC]
-        internal void RPC_SetLocalKillReward(string killedPlayerNickname)
+        internal void RPC_AppendLocalKillReward(string killedObjectName, int reward)
         {
             if (!IsOnSurface)
             {
-                UserInterface.ShowMoneyNotification($"Reward for killing {killedPlayerNickname}", $"${InitialSettings.KillReward}", MoneyCellUI.MoneyCellType.HospitalBill);
-                SurfaceNetworkHandler.RoomStats.AddMoney(InitialSettings.KillReward);
+                UserInterface.ShowMoneyNotification($"Reward for killing {killedObjectName}", $"${reward}", MoneyCellUI.MoneyCellType.Revenue);
+                _totalRewardForAllKills += reward;
             }
         }
 
@@ -246,35 +296,56 @@ namespace LazerHook
             _spawnedProjectile.hitAction = (Action<RaycastHit>)Delegate.Combine(_spawnedProjectile.hitAction, delegate (RaycastHit hit)
             {
                 var _hitPlayer = hit.collider.GetComponentInParent<Player>();
-                var _hitMortality = hit.collider.GetComponentInParent<Mortality>();
-                Logger.LogDebug($"player null: {_hitPlayer == null} mortality null: {_hitMortality == null}");
                 if (_hitPlayer != null)
                 {
+                    string _hitPlayerGOName = hit.collider.transform.root.name.Replace("(Clone)", string.Empty).Replace("Toolkit_", string.Empty).Replace("2", string.Empty);
+                    string _hitPlayerNickname = _hitPlayer.photonView.Owner.NickName;
                     bool _hitHead = _hitPlayer.refs.ragdoll.GetBodypartFromCollider(hit.collider).bodypartType == BodypartType.Head;
                     int _headshotDamage = (int)(InitialSettings.Damage * InitialSettings.HeadshotDamageMultiplier) - InitialSettings.Damage;
                     if (_hitHead && !_hitPlayer.data.dead)
                     {
-                        Logger.LogDebug($"hit head: {_hitHead} collider name: {hit.collider.name} headshot dmg: {_headshotDamage}");
                         MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_SetLocalHelmetText), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, $"headshot! (x<insertCombo>)\n", false, true);
                         MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_PlayLocalSound), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, (int)SoundType.Headshot, InitialSettings.HeadshotSoundVolume);
                         if (!_hitPlayer.ai)
-                            _hitPlayer.CallTakeDamageAndTase(0f, InitialSettings.HeadshotFallTime); // we dont deal any damage here because we deal it later on
-                        _hitMortality!.Damage(_headshotDamage);
-                    }
-                    if (!_hitPlayer.ai && !_hitPlayer.refs.view.IsMine && _hitPlayer.data.sinceDied <= 0.5f && (_hitPlayer.data.health <= InitialSettings.Damage || _hitPlayer.data.health <= (InitialSettings.Damage + _headshotDamage)) && _hitHead)
-                    {
-                        Logger.LogDebug(_hitPlayer.ai ? "why the fuck are you calling???" : "ok sanity check completed");
-                        string _hitPlayerNickname = _hitPlayer.refs.view.Owner.NickName;
-                        string _hitPlayerHexColor = ColorUtility.ToHtmlStringRGB(_hitPlayer.refs.visor.visorColor.value);
-                        MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_SetLocalHelmetText), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, $"<color=red>killed</color> <color=#{_hitPlayerHexColor}>{_hitPlayerNickname}!</color>", true, false);
-                        MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_PlayLocalSound), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, (int)SoundType.Kill, InitialSettings.KillSoundVolume);
-                        MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_SetLocalKillReward), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, _hitPlayerNickname);
+                            _hitPlayer.CallTakeDamageAndTase(MortalityLoaded ? 0f : _headshotDamage, InitialSettings.HeadshotFallTime); // we dont deal any damage here because we deal it later on
+                        if (MortalityLoaded)
+                            HandleDamageToMortality(hit.collider, _headshotDamage);
                     }
                     if (_hitPlayer.ai)
                     {
                         _hitPlayer.CallTakeDamageAndAddForceAndFall(0f, hit.point * InitialSettings.MonsterHitForceMultiplier, InitialSettings.MonsterFallTime * (_hitHead ? 2 : 1)); // basically we implement a cheaper shock stick that works only on monsters
-                        if (InitialSettings.VulnerableEnemies)
-                            _hitMortality!.Damage(_headshotDamage);
+                        if (InitialSettings.VulnerableEnemies && MortalityLoaded)
+                            HandleDamageToMortality(hit.collider, InitialSettings.Damage);
+                    }
+                    if (_hitPlayer.data.sinceDied == 1000 && _hitPlayer.data.dead)
+                    {
+                        Bot? _bot = null;
+                        if (!_hitPlayer.ai)
+                        {
+                            string _hitPlayerHexColor = ColorUtility.ToHtmlStringRGB(_hitPlayer.refs.visor.visorColor.value);
+                            MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_SetLocalHelmetText), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, $"<color=red>killed</color> <color=#{_hitPlayerHexColor}>{_hitPlayerNickname}!</color>", true, false);
+                        }
+                        else
+                        {
+                            _bot = _hitPlayer.GetComponentInChildren<Bot>();
+                            string _monsterDangerLevelColor = string.Empty;
+                            switch (_bot.jumpScareLevel)
+                            {
+                                case 1:
+                                    _monsterDangerLevelColor = "white";
+                                    break;
+                                case 0: // assuming that bot who have 0 jumpscare lvl is either a streamer or a infiltrator, which can't be killed easily and can be considered as mid-tier enemy
+                                case 2:
+                                    _monsterDangerLevelColor = "yellow";
+                                    break;
+                                case 3:
+                                    _monsterDangerLevelColor = "red";
+                                    break;
+                            }
+                            MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_SetLocalHelmetText), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, $"<color=red>killed</color> <color={_monsterDangerLevelColor}>{_hitPlayerGOName}!</color>", true, false);
+                        }
+                        MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_PlayLocalSound), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, (int)SoundType.Kill, InitialSettings.KillSoundVolume);
+                        MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_AppendLocalKillReward), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID, _hitPlayer.ai ? _hitPlayerGOName : _hitPlayerNickname, _hitPlayer.ai ? InitialSettings.MonsterKillReward * (_bot?.jumpScareLevel == 0 ? 2 : _bot?.jumpScareLevel) : InitialSettings.PlayerKillReward);
                     }
                     MyceliumNetwork.RPCTargetMasked(MYCELIUM_ID, nameof(RPC_ApplyLocalHelmetText), shooterInfo.SenderSteamID, ReliableType.Reliable, LocalPhotonViewID);
                 }
@@ -284,7 +355,7 @@ namespace LazerHook
         [ConsoleCommand]
         public static void GiveEveryoneRescueHook()
         {
-            if (MyceliumNetwork.IsHost) // fuck photon, all my homies use mycelium!
+            if (MyceliumNetwork.IsHost && !MainMenuHandler.SteamLobbyHandler.IsPlayingWithRandoms()) // fuck photon, all my homies use mycelium!
                 AddRescueHookToAll();
         }
     }

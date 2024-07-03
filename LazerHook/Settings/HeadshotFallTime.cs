@@ -3,11 +3,11 @@ using System;
 using Unity.Mathematics;
 using Zorro.Settings;
 
-namespace LazerHook.Settings
+namespace LazerWeaponry.Settings
 {
     internal class HeadshotFallTime : FloatSetting, ICustomSetting
     {
-        public override void ApplyValue() => Plugin.SyncedSettings.sync_HeadshotFallTime.SetValue((float)Math.Round(Value, 2));
+        public override void ApplyValue() => LazerWeaponryPlugin.SyncedSettings.sync_HeadshotFallTime.SetValue((float)Math.Round(Value, 2));
 
         public string GetDisplayName() => "Player fall time upon headshot";
 

@@ -3,11 +3,11 @@ using System;
 using Unity.Mathematics;
 using Zorro.Settings;
 
-namespace LazerHook.Settings
+namespace LazerWeaponry.Settings
 {
     internal class HeadshotDamageMultiplier : FloatSetting, ICustomSetting
     {
-        public override void ApplyValue() => Plugin.SyncedSettings.sync_HeadshotDamageMultiplier.SetValue((float)Math.Round(Value, 2));
+        public override void ApplyValue() => LazerWeaponryPlugin.SyncedSettings.sync_HeadshotDamageMultiplier.SetValue((float)Math.Round(Value, 2));
 
         public string GetDisplayName() => "Damage multiplier on headshot";
 

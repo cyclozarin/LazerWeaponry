@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEngine;
 using MyceliumNetworking;
 
-namespace LazerHook.Hooks
+namespace LazerWeaponry.Hooks
 {
     public class RescueHookHook
     {
@@ -37,7 +37,7 @@ namespace LazerHook.Hooks
         private static IEnumerator StartDelayAfterFire()
         {
             _ableToFire = false;
-            yield return new WaitForSecondsRealtime(Plugin.InitialSettings.DelayAfterFire);
+            yield return new WaitForSecondsRealtime(LazerWeaponryPlugin.InitialSettings.DelayAfterFire);
             _ableToFire = true;
         }
 
@@ -93,7 +93,6 @@ namespace LazerHook.Hooks
 
         internal static void PlaySoundEffect(AudioClip clip, float volume)
         {
-            Plugin.Logger.LogDebug($"playing {clip.name} at volume {volume}");
             _customSource.PlayOneShot(clip, volume);
         }
         #endregion
@@ -104,26 +103,26 @@ namespace LazerHook.Hooks
             On.RescueHook.Start += MMHook_Postfix_SetRescueHookDataOnStart;
             On.RescueHook.Update += MMHook_Postfix_ToggleRescueHookModeAndCheckForIt;
             On.RescueHook.Fire += MMHook_Prefix_LazersInRescueHook;
-            On.Player.Start += MMHook_Postfix_CreateCustomAudioSourceAndReregisterInMycelium;
+            On.Player.Start += MMHook_Postfix_CreateCustomSourcesAndReregisterInMycelium;
         }
 
-        private static IEnumerator MMHook_Postfix_CreateCustomAudioSourceAndReregisterInMycelium(On.Player.orig_Start orig, Player self)
+        private static IEnumerator MMHook_Postfix_CreateCustomSourcesAndReregisterInMycelium(On.Player.orig_Start orig, Player self)
         {
             var _orig = orig(self);
             while (_orig.MoveNext()) { yield return _orig.Current; }
             if (!self.ai)
             {
                 _chargeSource = self.GetComponent<PlayerDataSounds>().throwCharge;
-                var _customSourceObject = self.refs.headPos.Find(_sourceName + "(Clone)"); // clone voodoo...
-                if (_customSourceObject == null)
+                var _customSourceObject = GameObject.Find(_sourceName);
+                if (GameObject.Find(_sourceName) == null)
                 {
-                    var _sourceObject = Object.Instantiate(new GameObject(_sourceName), self.HeadPosition(), self.refs.headPos.rotation, self.refs.headPos.transform);
+                    var _sourceObject = Object.Instantiate(new GameObject(_sourceName), self.HeadPosition(), self.refs.headPos.rotation);
                     _sourceObject.hideFlags = HideFlags.HideAndDontSave;
                     _customSource = _sourceObject.AddComponent<AudioSource>();
-                    Object.Destroy(GameObject.Find(_sourceName)); // destroy original object and keep its clone that placed in the right hierarchy
+                    Object.DontDestroyOnLoad(_sourceObject);
                 }
                 else { _customSource = _customSourceObject!.GetComponent<AudioSource>(); }
-                MyceliumNetwork.RegisterNetworkObject(Plugin.Instance, Plugin.MYCELIUM_ID, Plugin.LocalPhotonViewID); // before we registered plugin class in Mycelium without mask because we hadn't it, so here we got mask and re-register plugin in Mycelium with it
+                MyceliumNetwork.RegisterNetworkObject(LazerWeaponryPlugin.Instance, LazerWeaponryPlugin.MYCELIUM_ID, LazerWeaponryPlugin.LocalPhotonViewID); // before we registered plugin class in Mycelium without mask because we hadn't it, so here we got mask and re-register plugin in Mycelium with it
             }
         }
 
@@ -136,7 +135,7 @@ namespace LazerHook.Hooks
             ChangeRescueHookBeamColor(self);
             if (_recharging || self.m_batteryEntry.m_charge == 0) 
             {
-                Plugin.Logger.LogDebug("rescue hook was switched to different slot, we'll charge it");
+                LazerWeaponryPlugin.Logger.LogDebug("rescue hook was switched to different slot, we'll charge it");
                 self.StartCoroutine(DelayAndHookRecharge(self)); 
             }
         }
@@ -146,7 +145,9 @@ namespace LazerHook.Hooks
             orig(self);
             try
             {
-                _chargeSource.enabled = !_firedWhileAgo;
+                Player.localPlayer.TryGetInventory(out var _localPlayerInventory);
+                _localPlayerInventory.TryGetItemInSlot(Player.localPlayer.data.selectedItemSlot, out var _item); // checks for disabling charge sound when switched to another slot
+                _chargeSource.enabled = _item.item == self.itemInstance.item && !_firedWhileAgo;
                 if (_lazerMode) self.isPulling = false;
                 if (self.isHeldByMe && self.playerHoldingItem.input.toggleCameraFlipWasPressed && !self.playerHoldingItem.HasLockedInput() && GlobalInputHandler.CanTakeInput())
                 {
@@ -159,7 +160,7 @@ namespace LazerHook.Hooks
 
         private static void MMHook_Prefix_LazersInRescueHook(On.RescueHook.orig_Fire orig, RescueHook self)
         {
-            if (Plugin.InitialSettings.PVPMode)
+            if (LazerWeaponryPlugin.InitialSettings.PVPMode)
             {
                 _firedWhileAgo = true;
                 if (_hookRechargeCoroutine != null)
@@ -171,9 +172,9 @@ namespace LazerHook.Hooks
             if (_lazerMode)
             {
                 if (!_ableToFire) return;
-                self.m_batteryEntry.AddCharge(-self.m_batteryEntry.m_maxCharge / Plugin.InitialSettings.MaxAmmo);
-                MyceliumNetwork.RPC(Plugin.MYCELIUM_ID, nameof(Plugin.RPC_SpawnBullet), ReliableType.Reliable, self.dragPoint.position + (self.dragPoint.forward * 1.5f) + (Vector3.down * 0.15f) + (Vector3.left * 0.05f), Quaternion.LookRotation(self.dragPoint.forward));
-                self.playerHoldingItem.CallAddForceToBodyParts([self.playerHoldingItem.refs.ragdoll.GetBodyPartID(BodypartType.Hand_R)], [-self.dragPoint.forward * Plugin.InitialSettings.RecoilForce]);
+                self.m_batteryEntry.AddCharge(-self.m_batteryEntry.m_maxCharge / LazerWeaponryPlugin.InitialSettings.MaxAmmo);
+                MyceliumNetwork.RPC(LazerWeaponryPlugin.MYCELIUM_ID, nameof(LazerWeaponryPlugin.RPC_SpawnBullet), ReliableType.Reliable, self.dragPoint.position + (self.dragPoint.forward * 1.5f) + (Vector3.down * 0.15f) + (Vector3.left * 0.05f), Quaternion.LookRotation(self.dragPoint.forward));
+                self.playerHoldingItem.CallAddForceToBodyParts([self.playerHoldingItem.refs.ragdoll.GetBodyPartID(BodypartType.Hand_R)], [-self.dragPoint.forward * LazerWeaponryPlugin.InitialSettings.RecoilForce]);
                 self.StartCoroutine(StartDelayAfterFire());
                 return;
             }

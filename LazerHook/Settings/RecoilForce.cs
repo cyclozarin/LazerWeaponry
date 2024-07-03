@@ -1,10 +1,10 @@
 ﻿using ContentSettings.API.Settings;
 
-namespace LazerHook.Settings
+namespace LazerWeaponry.Settings
 {
     internal class RecoilForce : IntSetting, ICustomSetting
     {
-        public override void ApplyValue() => Plugin.SyncedSettings.sync_RecoilForce.SetValue(Value);
+        public override void ApplyValue() => LazerWeaponryPlugin.SyncedSettings.sync_RecoilForce.SetValue(Value);
 
         public string GetDisplayName() => "Recoil force";
 

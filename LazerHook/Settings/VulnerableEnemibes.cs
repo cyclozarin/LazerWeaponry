@@ -1,10 +1,10 @@
 ﻿using ContentSettings.API.Settings;
 
-namespace LazerHook.Settings
+namespace LazerWeaponry.Settings
 {
     internal class VulnerableEnemies : BoolSetting, ICustomSetting
     {
-        public override void ApplyValue() => Plugin.SyncedSettings.sync_VulnerableEnemies.SetValue(Value);
+        public override void ApplyValue() => LazerWeaponryPlugin.SyncedSettings.sync_VulnerableEnemies.SetValue(Value);
 
         public string GetDisplayName() => "Vulnerable enemies";
 

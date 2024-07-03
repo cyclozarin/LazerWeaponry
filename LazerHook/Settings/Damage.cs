@@ -1,11 +1,11 @@
 ﻿using ContentSettings.API.Settings;
 
-namespace LazerHook.Settings
+namespace LazerWeaponry.Settings
 {
     internal class Damage : IntSetting, ICustomSetting
     {
 
-        public override void ApplyValue() => Plugin.SyncedSettings.sync_Damage.SetValue(Value);
+        public override void ApplyValue() => LazerWeaponryPlugin.SyncedSettings.sync_Damage.SetValue(Value);
 
         public string GetDisplayName() => "Bullet damage";
 
