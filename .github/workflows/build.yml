@@ -38,4 +38,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: thunderstore-build
-          path: LazerWeaponry/dist/*.zip
+          path: LazerHook/dist/*.zip
