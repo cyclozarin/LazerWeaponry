@@ -1,7 +1,9 @@
 ﻿using ContentSettings.API.Settings;
+using ContentSettings.API.Attributes;
 
 namespace LazerWeaponry.Settings
 {
+    [SettingRegister("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings")]
     internal class Damage : IntSetting, ICustomSetting
     {
 

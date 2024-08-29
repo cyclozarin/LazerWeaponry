@@ -1,7 +1,9 @@
-﻿using ContentSettings.API.Settings;
+﻿using ContentSettings.API.Attributes;
+using ContentSettings.API.Settings;
 
 namespace LazerWeaponry.Settings
 {
+    [SettingRegister("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Sound settings")]
     internal class KillSoundVolume : IntSetting, ICustomSetting
     {
         public override void ApplyValue() => LazerWeaponryPlugin.InitialSettings.KillSoundVolume = Value / 100f;

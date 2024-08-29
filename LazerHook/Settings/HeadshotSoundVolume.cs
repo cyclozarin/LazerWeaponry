@@ -1,8 +1,10 @@
 ﻿using BepInEx.Logging;
+using ContentSettings.API.Attributes;
 using ContentSettings.API.Settings;
 
 namespace LazerWeaponry.Settings
 {
+    [SettingRegister("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Sound settings")]
     internal class HeadshotSoundVolume : IntSetting, ICustomSetting
     {
         public override void ApplyValue() => LazerWeaponryPlugin.InitialSettings.HeadshotSoundVolume = Value / 100f; 

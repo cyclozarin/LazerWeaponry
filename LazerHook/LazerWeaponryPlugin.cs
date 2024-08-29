@@ -107,7 +107,7 @@ namespace LazerWeaponry
 
             HookAll();
 
-            RegisterSettings();
+            //RegisterSettings();
             RegisterSyncedSettings();
            
             MyceliumNetwork.RegisterNetworkObject(this, MYCELIUM_ID);
@@ -154,26 +154,26 @@ namespace LazerWeaponry
             }
         }
 
-        private void RegisterSettings()
-        {
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new Damage());
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new MaxAmmo());
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new RecoilForce());
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new DelayAfterFire());
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new HeadshotDamageMultiplier());
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new HeadshotFallTime());
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new PlayerKillReward());
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new MonsterKillReward());
+        //private void RegisterSettings()
+        //{
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new Damage());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new MaxAmmo());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new RecoilForce());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new DelayAfterFire());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new HeadshotDamageMultiplier());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new HeadshotFallTime());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new PlayerKillReward());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Rescue hook's lazer mode settings", new MonsterKillReward());
 
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Sound settings", new HeadshotSoundVolume());
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Sound settings", new KillSoundVolume());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Sound settings", new HeadshotSoundVolume());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Sound settings", new KillSoundVolume());
 
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Monster behaviour on hit", new MonsterFallTime());
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Monster behaviour on hit", new MonsterHitForceMultiplier());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Monster behaviour on hit", new MonsterFallTime());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Monster behaviour on hit", new MonsterHitForceMultiplier());
 
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "PvP settings", new PVPMode());
-            SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "PvP settings", new VulnerableEnemies());
-        }
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "PvP settings", new PVPMode());
+        //    SettingsLoader.RegisterSetting("<size=75%>LAZERWEAPONRY SETTINGS</size>", "PvP settings", new VulnerableEnemies());
+        //}
 
         private void RegisterSyncedSettings()
         {

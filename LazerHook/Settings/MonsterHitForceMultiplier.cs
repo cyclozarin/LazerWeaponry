@@ -1,10 +1,12 @@
-﻿using ContentSettings.API.Settings;
+﻿using ContentSettings.API.Attributes;
+using ContentSettings.API.Settings;
 using System;
 using Unity.Mathematics;
 using Zorro.Settings;
 
 namespace LazerWeaponry.Settings
 {
+    [SettingRegister("<size=75%>LAZERWEAPONRY SETTINGS</size>", "Monster behaviour on hit")]
     internal class MonsterHitForceMultiplier : FloatSetting, ICustomSetting
     {
         public override void ApplyValue() => LazerWeaponryPlugin.SyncedSettings.sync_MonsterHitForceMultiplier.SetValue((float)Math.Round(Value, 2));
